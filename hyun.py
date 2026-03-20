@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-import requests, time, random
+import requests, time, random, os
 
 app = Flask(__name__)
 
@@ -12,16 +12,13 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# =========================
-# SCAN SERVER
-# =========================
 def scan_servers():
     global cache, last_scan
 
     cache = []
     cursor = None
 
-    for _ in range(10):
+    for _ in range(5):
         url = f"https://games.roblox.com/v1/games/{PLACE_ID}/servers/Public?limit=100"
         if cursor:
             url += f"&cursor={cursor}"
@@ -29,11 +26,7 @@ def scan_servers():
         try:
             res = requests.get(url, headers=headers, timeout=10)
             data = res.json()
-
-            print("FETCH:", len(data.get("data", [])))
-
-        except Exception as e:
-            print("Lỗi:", e)
+        except:
             break
 
         for s in data.get("data", []):
@@ -48,13 +41,9 @@ def scan_servers():
 
         time.sleep(1)
 
-    print("TOTAL:", len(cache))
     last_scan = time.time()
 
 
-# =========================
-# GET CACHE
-# =========================
 def get_cache():
     global last_scan
 
@@ -64,49 +53,27 @@ def get_cache():
     return cache
 
 
-# =========================
-# API: RANDOM SERVER
-# =========================
-@app.route("/hop")
-def hop():
-    servers = get_cache()
-
-    if not servers:
-        return jsonify({
-            "success": False,
-            "data": None
-        })
-
-    pick = random.choice(servers[:20])
-
-    return jsonify({
-        "success": True,
-        "data": {
-            "jobId": pick["id"]
-        }
-    })
-
-
-# =========================
-# API: LIST SERVER
-# =========================
-@app.route("/servers")
-def servers():
-    return jsonify(get_cache())
-
-
-# =========================
-# HOME
-# =========================
 @app.route("/")
 def home():
     return "API OK"
 
 
-import os
+@app.route("/hop")
+def hop():
+    servers = get_cache()
 
+    if not servers:
+        return jsonify({"success": False})
+
+    pick = random.choice(servers[:20])
+
+    return jsonify({
+        "success": True,
+        "jobId": pick["id"]
+    })
+
+
+# ✅ QUAN TRỌNG
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
-
-# ❌ KHÔNG DÙNG app.run() KHI DEPLOY RENDER
